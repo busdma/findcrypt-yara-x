@@ -1,5 +1,4 @@
 /*
-    from https://github.com/Yara-Rules/rules/tree/master/Crypto
     This Yara ruleset is under the GNU-GPLv2 license (http://www.gnu.org/licenses/gpl-2.0.html) and open to any user or organization, as long as you use it under this license.
 */
 rule Big_Numbers0
@@ -153,7 +152,7 @@ rule CRC32_table {
 		date = "2015-05"
 		version = "0.1"
 	strings:
-		$c0 = { 00000000 77073096 EE0E612C 990951BA 076DC419 }
+		$c0 = { 00 00 00 00 96 30 07 77 2C 61 0E EE BA 51 09 99 19 C4 6D 07 }
 	condition:
 		$c0
 }
@@ -190,7 +189,7 @@ rule CRC16_table {
 		date = "2016-04"
 		version = "0.1"
 	strings:
-		$c0 = { 0000 1021 2042 3063 4084 50A5 60C6 70E7 8108 9129 A14A B16B C18C D1AD E1CE F1EF 1231 0210 3273 2252 52B5 4294 72F7 62D6 9339 8318 B37B A35A D3BD C39C F3FF E3DE }
+		$c0 = { 00 00 21 10 42 20 63 30 84 40 A5 50 C6 60 E7 70 08 81 29 91 4A A1 6B B1 8C C1 AD D1 CE E1 EF F1 31 12 10 02 73 32 52 22 B5 52 94 42 F7 72 D6 62 39 93 18 83 7B B3 5A A3 BD D3 9C C3 FF F3 DE E3 }
 	condition:
 		$c0
 }
@@ -358,35 +357,6 @@ rule SHA1_Constants {
 		5 of them
 }
 
-rule SHA256_Constants {
-	meta:
-		author = "Andrew Williams (@recvfrom)"
-		description = "Look for SHA256 constants"
-		date = "2020-10"
-		version = "0.1"
-	strings:
-        $c_le_1 = { 6A09E667 }
-        $c_le_2 = { BB67AE85 }
-        $c_le_3 = { 3C6EF372 }
-        $c_le_4 = { A54FF53A }
-        $c_le_5 = { 510E527F }
-        $c_le_6 = { 9B05688C }
-        $c_le_7 = { 1F83D9AB }
-        $c_le_8 = { 5BE0CD19 }
-
-        $c_be_1 = { 67E6096A }
-        $c_be_2 = { 85AE67BB }
-        $c_be_3 = { 72F36E3C }
-        $c_be_4 = { 3AF54FA5 }
-        $c_be_5 = { 7F520E51 }
-        $c_be_6 = { 8C68059B }
-        $c_be_7 = { ABD9831F }
-        $c_be_8 = { 19CDE05B }
-
-	condition:
-		5 of ($c_be_*) or 5 of ($c_le_*)
-}
-
 rule SHA512_Constants {
 	meta:
 		author = "phoul (@phoul)"
@@ -406,6 +376,26 @@ rule SHA512_Constants {
 		$c9 = { 22AE28D7 }
 	condition:
 		5 of them
+}
+
+rule SHA2_BLAKE2_IVs {
+	meta:
+		author = "spelissier"
+		description = "Look for SHA2/BLAKE2/Argon2 IVs"
+		date = "2019-12"
+		version = "0.1"
+	strings:
+		$c0 = { 67 E6 09 6A }
+		$c1 = { 85 AE 67 BB }
+		$c2 = { 72 F3 6E 3C }
+		$c3 = { 3A F5 4F A5 }
+		$c4 = { 7F 52 0E 51 }
+		$c5 = { 8C 68 05 9B }
+		$c6 = { AB D9 83 1F }
+		$c7 = { 19 CD E0 5B }
+
+	condition:
+		all of them
 }
 
 rule TEAN {
@@ -1067,6 +1057,18 @@ rule RijnDael_AES_CHAR
 		$c0
 }
 
+rule ARIA_SB2
+{	meta:
+		author = "spelissier"
+		description = "Aria SBox 2"
+		date = "2020-12"
+		reference="http://210.104.33.10/ARIA/doc/ARIA-specification-e.pdf#page=7"
+	strings:
+		$c0 = { E2 4E 54 FC 94 C2 4A CC 62 0D 6A 46 3C 4D 8B D1 5E FA 64 CB B4 97 BE 2B BC 77 2E 03 D3 19 59 C1 }
+	condition:
+		$c0
+}
+
 rule RijnDael_AES_CHAR_inv
 {	meta:
 		author = "_pusher_"
@@ -1075,39 +1077,6 @@ rule RijnDael_AES_CHAR_inv
 		date = "2016-07"
 	strings:
 		$c0 = { 48 38 47 00 88 17 33 D2 8A 56 0D 8A 92 48 38 47 00 88 57 01 33 D2 8A 56 0A 8A 92 48 38 47 00 88 57 02 33 D2 8A 56 07 8A 92 48 38 47 00 88 57 03 33 D2 8A 56 04 8A 92 }
-	condition:
-		$c0
-}
-
-rule RijnDael_AES_LONG
-{	meta:
-		author = "_pusher_"
-		description = "RijnDael AES"
-		date = "2016-06"
-	strings:
-		$c0 = { 63 7C 77 7B F2 6B 6F C5 30 01 67 2B FE D7 AB 76 CA 82 C9 7D FA 59 47 F0 AD D4 A2 AF 9C A4 72 C0 }
-	condition:
-		$c0
-}
-
-rule RijnDael_AES_LONG_inv
-{	meta:
-		author = "edeca"
-		description = "RijnDael AES"
-		date = "2019-10"
-	strings:
-		$c0 = { 52 09 6A D5 30 36 A5 38 BF 40 A3 9E 81 F3 D7 FB 7C E3 39 82 9B 2F FF 87 34 8E 43 44 C4 DE E9 CB }
-	condition:
-		$c0
-}
-
-rule RijnDael_AES_RCON
-{	meta:
-		author = "edeca"
-		description = "RijnDael AES round constants"
-		date = "2019-10"
-	strings:
-		$c0 = { 8D 01 02 04 08 10 20 40 80 1B 36 6C D8 AB 4D 9A }
 	condition:
 		$c0
 }
@@ -1484,90 +1453,128 @@ rule DCP_DES_EncryptECB {
 		any of them
 }
 
-rule TEA_DELTA2 {
-	meta:
-		author = "_pusher_"
-		description = "TEA DELTA"
-		date = "2016-02"
+rule Chacha_128_constant {
+    meta:
+		author = "spelissier"
+		description = "Look for 128-bit key Chacha stream cipher constant"
+		date = "2019-12"
+		reference = "https://www.ecrypt.eu.org/stream/salsa20pf.html"
 	strings:
-		$c0 = { 9E 37 79 B9 }
-		$c1 = { 61 C8 86 47 }
-	condition:
-		any of them
-}
-
-rule TEA_DELTA {
-	meta:
-		author = "_pusher_"
-		description = "TEA DELTA"
-		date = "2016-02"
-	strings:
-		$c0 = { B9 79 37 9E }
-		$c1 = { 47 86 C8 61 }
-	condition:
-		any of them
-}
-
-rule TEA_SUM {
-	meta:
-		author = "_pusher_"
-		description = "TEA SUM"
-		date = "2016-02"
-	strings:
-		$c0 = { 90 9B 77 E3 }
-	condition:
-		any of them
-}
-
-rule WellRNG512 {
-	meta:
-		author = "golem"
-		description = "Well512 Rng Constant"
-		date = "2024-11"
-	strings:
-		$c0 = { 24 2D 44 DA }
-		$c1 = { 20 2D 44 DA }
-	condition:
-		any of them
-}
-
-rule Sosemanuk
-{
-    /* Notes:
-     *
-     * - mul_a and mul_ia are commonly stored in a 4-byte value array, so
-     *   look for a 4-byte little endian equivalant also
-     *
-     * - mul_a and mul_ia start with four zero bytes, which is a fairly common
-     *   pattern in EXEs.  Including these bytes in the strings below is likely
-     *   worse for scan performance than omitting them, but I'm leaving them in
-     *   because findcrypt-yara leverages the yara API to map substring matches
-     *   to binary offsets (and then into virtual addresses), and the virtual
-     *   address for the start of these is likely to have more xrefs than the
-     *   the virtual address of (matching_offset + 4).  If, instead, better
-     *   performance is desired for your use case, just remove the zero bytes
-     *   from the strings below.
-     *
-     * Reference:
-     * - https://labs.sentinelone.com/enter-the-maze-demystifying-an-affiliate-involved-in-maze-snow/
-     */
-    strings:
-        $mul_a_be = {00 00 00 00 E1 9F CF 13 6B 97 37 26 8A 08 F8 35 [992] B5 5B 4D DE 54 C4 82 CD DE CC 7A F8 3F 53 B5 EB}
-        $mul_a_le = {00 00 00 00 13 CF 9F E1 26 37 97 6B 35 F8 08 8A [992] DE 4D 5B B5 CD 82 C4 54 F8 7A CC DE EB B5 53 3F}
-        $mul_ia_be = {00 00 00 00 18 0F 40 CD 30 1E 80 33 28 11 C0 FE [992] 9E E2 65 1C 86 ED 25 D1 AE FC E5 2F B6 F3 A5 E2}
-        $mul_ia_le = {00 00 00 00 CD 40 0F 18 33 80 1E 30 FE C0 11 28 [992] 1C 65 E2 9E D1 25 ED 86 2F E5 FC AE E2 A5 F3 B6}
-
-    condition:
-        any of them
-}
-
-rule salsa20 {
-	meta:
-		author = "eric"
-		description = "salsa20/chacha20 fixed words"
-		date = "2020-10"
-	strings:
-		$c0 = "expand 32-byte k" ascii
+		$c0 = "expand 16-byte k"
 	condition:
 		$c0
+}
+
+rule Chacha_256_constant {
+    meta:
+		author = "spelissier"
+		description = "Look for 256-bit key Chacha stream cipher constant"
+		date = "2019-12"
+		reference = "https://tools.ietf.org/html/rfc8439#page-8"
+	strings:
+		$c0 = "expand 32-byte k"
+		$split1 = "expand 3"
+		$split2 = "2-byte k"
+	condition:
+		$c0 or ( $split1 and $split2 )
+}
+
+rule ecc_order {
+    meta:
+		author = "spelissier"
+		description = "Look for known Elliptic curve orders"
+		date = "2021-07"
+		version = "0.2"
+	strings:
+		$secp192k1 = { FF FF FF FF FF FF FF FF FF FF FF FE 26 F2 FC 17 0F 69 46 6A 74 DE FD 8D}
+		$secp192r1 = { FF FF FF FF FF FF FF FF FF FF FF FF 99 DE F8 36 14 6B C9 B1 B4 D2 28 31}
+		$secp224k1 = { 01 00 00 00 00 00 00 00 00 00 00 00 00 00 01 DC E8 D2 EC 61 84 CA F0 A9 71 76 9F B1 F7}
+		$secp224r1 = { FF FF FF FF FF FF FF FF FF FF FF FF FF FF 16 A2 E0 B8 F0 3E 13 DD 29 45 5C 5C 2A 3D}
+		$secp256k1 = { FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FE BA AE DC E6 AF 48 A0 3B BF D2 5E 8C D0 36 41 41 }
+		$prime256v1 = { FF FF FF FF 00 00 00 00 FF FF FF FF FF FF FF FF BC E6 FA AD A7 17 9E 84 F3 B9 CA C2 FC 63 25 51 }
+		$secp384r1 = { FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF C7 63 4D 81 F4 37 2D DF 58 1A 0D B2 48 B0 A7 7A EC EC 19 6A CC C5 29 73 }
+		$bls12_381_r = { 01 00 00 00 FF FF FF FF FE 5B FE FF 02 A4 BD 53 05 D8 A1 09 08 D8 39 33 48 7D 9D 29 53 A7 ED 73}
+	condition:
+		any of them
+}
+
+rule SHA3_constants {
+	meta:
+		author = "spelissier"
+		description = "SHA-3 (Keccak) round constants"
+		date = "2020-04"
+		version = "0.1"
+	strings:
+		$c0  = { 0080008000000080 }
+		$c1  = { 0a00008000000080 }
+		$c2  = { 8080000000000080 }
+		$c3  = { 8b00000000000080 }
+		$c4  = { 8280000000000000 }
+		$c5  = { 8980000000000080 }
+		$c6  = { 0880008000000080 }
+		$c7  = { 0980008000000000 }
+		$c8  = { 0280000000000080 }
+		$c9  = { 0a00008000000000 }
+		$c10 = { 0380000000000080 }
+		$c11 = { 8b80000000000000 }
+		$c12 = { 0100008000000000 }
+		$c13 = { 0a80000000000000 }
+		$c14 = { 0980000000000080 }
+		$c15 = { 8000000000000080 }
+		$c16 = { 8800000000000000 }
+		$c17 = { 8b80008000000000 }
+		$c18 = { 8a00000000000000 }
+		$c19 = { 8180008000000080 }
+		$c20 = { 0100000000000000 }
+		$c21 = { 8a80000000000080 }
+	condition:
+		10 of them
+}
+
+rule SHA3_interleaved {
+	meta:
+		author = "spelissier"
+		description = "SHA-3 (Keccak) interleaved round constants"
+		date = "2020-04"
+		version = "0.1"
+	strings:
+		$c0  = { 010000008b800000 }
+		$c1  = { 0000000081000080 }
+		$c2  = { 0000000088000080 }
+		$c3  = { 000000000b000000 }
+		$c4  = { 0100000000800000 }
+		$c5  = { 010000008b000000 }
+		$c6  = { 0100000082800000 }
+		$c7  = { 0000000003800000 }
+		$c8  = { 010000008a000080 }
+		$c9  = { 0000000082800080 }
+		$c10 = { 0000000003800080 }
+		$c11 = { 000000008b000080 }
+		$c12 = { 0000000083000000 }
+		$c13 = { 000000000a000000 }
+		$c14 = { 0000000080800080 }
+		$c15 = { 0100000082000080 }
+		$c16 = { 010000000b000080 }
+		$c17 = { 0100000088800080 }
+		$c18 = { 0000000008000080 }
+		$c19 = { 0100000000000000 }
+		$c20 = { 0000000089000000 }
+		$c21 = { 0100000081000080 }
+	condition:
+		10 of them
+}
+
+rule SipHash_big_endian_constants {
+    meta:
+		author = "spelissier"
+		description = "Look for SipHash constants in big endian"
+		date = "2020-07"
+		reference = "https://131002.net/siphash/siphash.pdf#page=6"
+	strings:
+		$c0 = "uespemos"
+		$c1 = "modnarod"
+		$c2 = "arenegyl"
+		$c3 = "setybdet"
+	condition:
+		2 of them
 }

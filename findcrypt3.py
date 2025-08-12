@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
-
 import idaapi
 import idautils
 import ida_bytes
 import ida_diskio
 import idc
-import operator
-import yara
+import yara_x
 import os
 import glob
 
-VERSION = "0.2"
-YARARULES_CFGFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "findcrypt3.rules")
+YARARULES_CFGFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "findcrypt3.yar")
 
 try:
     class Kp_Menu_Context(idaapi.action_handler_t):
@@ -59,13 +55,10 @@ try:
         def activate(self, ctx):
             self.plugin.search()
             return 1
-
 except:
     pass
 
-
 p_initialized = False
-
 
 class YaraSearchResultChooser(idaapi.Choose):
     def __init__(self, title, items, flags=0, width=None, height=None, embedded=False, modal=False):
@@ -76,9 +69,6 @@ class YaraSearchResultChooser(idaapi.Choose):
                 ["Address", idaapi.Choose.CHCOL_HEX|10],
                 ["Rules file", idaapi.Choose.CHCOL_PLAIN|12],
                 ["Name", idaapi.Choose.CHCOL_PLAIN|25],
-                ["String", idaapi.Choose.CHCOL_PLAIN|25],
-                ["Value", idaapi.Choose.CHCOL_PLAIN|40],
-                ["Hex", idaapi.Choose.CHCOL_PLAIN|45],
             ],
             flags=flags,
             width=width,
@@ -97,7 +87,7 @@ class YaraSearchResultChooser(idaapi.Choose):
 
     def OnGetLine(self, n):
         res = self.items[n]
-        res = [idc.atoa(res[0]), res[1], res[2], res[3], res[4], res[5]]
+        res = [idc.atoa(res[0]), res[1], res[2]]
         return res
 
     def OnGetSize(self):
@@ -111,7 +101,7 @@ class YaraSearchResultChooser(idaapi.Choose):
 # Plugin
 #--------------------------------------------------------------------------
 class Findcrypt_Plugin_t(idaapi.plugin_t):
-    comment = "Findcrypt plugin for IDA Pro (using yara framework)"
+    comment = "Findcrypt plugin for IDA Pro (using yara-x framework)"
     help = "todo"
     wanted_name = "Findcrypt"
     wanted_hotkey = "Ctrl-Alt-F"
@@ -138,17 +128,16 @@ class Findcrypt_Plugin_t(idaapi.plugin_t):
                 0))
             idaapi.attach_action_to_menu("Search", "Findcrypt", idaapi.SETMENU_APP)
             print("=" * 80)
-            print("Findcrypt v{0} by David BERARD, 2017".format(VERSION))
+            print("YARA-X support for Findcrypt, tested on IDA Pro 8.4")
             print("Findcrypt search shortcut key is Ctrl-Alt-F")
             print("Global rules in %s" % YARARULES_CFGFILE)
-            print("User-defined rules in %s/*.rules" % self.user_directory)
+            print("User-defined rules in %s/*.yar" % self.user_directory)
             print("=" * 80)
 
         return idaapi.PLUGIN_KEEP
 
     def term(self):
         pass
-
 
     def toVirtualAddress(self, offset, segments):
         va_offset = 0
@@ -157,58 +146,62 @@ class Findcrypt_Plugin_t(idaapi.plugin_t):
                 va_offset = seg[0] + (offset - seg[1])
         return va_offset
 
-
     def get_user_directory(self):
         user_dir = ida_diskio.get_user_idadir()
         plug_dir = os.path.join(user_dir, "plugins")
-        res_dir = os.path.join(plug_dir, "findcrypt-yara")
+        res_dir = os.path.join(plug_dir, "findcrypt-yara-x")
         if not os.path.exists(res_dir):
             os.makedirs(res_dir, 0o755)
         return res_dir
-
-
+    
     def get_rules_files(self):
-        rules_filepaths = {"global":YARARULES_CFGFILE}
-        for fpath in glob.glob(os.path.join(self.user_directory, "*.rules")):
-            name = os.path.basename(fpath)
-            rules_filepaths.update({name:fpath})
-        return rules_filepaths
+        yield YARARULES_CFGFILE
+        for fpath in glob.glob(os.path.join(self.user_directory, "*.yar")):
+            yield fpath
 
+    def get_compiled_rules(self):
+        compiler = yara_x.Compiler()
+        for path in self.get_rules_files():
+            try:
+                compiler.add_source(open(path).read())
+            except Exception as e:
+                print(f"Error compiling rule file {path}: {e}")
+        return compiler.build()
 
     def search(self):
         memory, offsets = self._get_memory()
-        rules = yara.compile(filepaths=self.get_rules_files())
+        rules = self.get_compiled_rules()
         values = self.yarasearch(memory, offsets, rules)
         c = YaraSearchResultChooser("Findcrypt results", values)
-        r = c.show()
+        c.show()
 
     def yarasearch(self, memory, offsets, rules):
-        print(">>> start yara search")
-        values = list()
-        matches = rules.match(data=memory)
-        for match in matches:
-            for string in match.strings:
-                for instance in string.instances:
-                    name = match.rule
-                    if name.endswith("_API"):
-                        try:
-                            name = name + "_" + idc.GetString(self.toVirtualAddress(instance.offset, offsets))
-                        except:
-                            pass
-                    value = [
-                        self.toVirtualAddress(instance.offset, offsets),
-                        match.namespace,
-                        name + "_" + hex(self.toVirtualAddress(instance.offset, offsets)).lstrip("0x").rstrip("L").upper(),
-                        string.identifier,
-                        repr(instance.matched_data),
-                        instance.matched_data.hex().upper(),
-                    ]
-                    idaapi.set_name(value[0], name
-                             + "_"
-                             + hex(self.toVirtualAddress(instance.offset, offsets)).lstrip("0x").rstrip("L").upper()
-                             , 0)
-                    values.append(value)
-        print("<<< end yara search")
+        print(">>> start yara-x search")
+        values = []
+        result = rules.scan(memory)
+        rows = [
+            (rule.identifier, rule.namespace, match.offset) 
+            for rule in result.matching_rules 
+            for pattern in rule.patterns
+            for match in pattern.matches
+        ]
+        for row in rows:
+            identifier, namespace, offset = row
+            va = self.toVirtualAddress(offset, offsets)
+            if identifier.endswith("_API"):
+                try:
+                    name = idc.get_strlit_contents(va)
+                    identifier = f"{identifier}_{name.decode()}"
+                except:
+                    pass
+            values.append([
+                va,
+                namespace,
+                f"{identifier}_{va:X}",
+            ])
+            if idaapi.get_name(va) == "":
+                idaapi.set_name(va, f"{identifier}_{va:X}", 0)
+        print("<<< end yara-x search")
         return values
 
     def _get_memory(self):
@@ -225,7 +218,6 @@ class Findcrypt_Plugin_t(idaapi.plugin_t):
 
     def run(self, arg):
         self.search()
-
 
 # register IDA plugin
 def PLUGIN_ENTRY():
